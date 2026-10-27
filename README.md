@@ -1,6 +1,13 @@
-# Demo API - Docker Compose
+# Demo API - Architecture Microservices & CD
 
 Le fil rouge des quêtes Docker.
+
+## Architecture
+L'application se compose de 4 conteneurs interconnectés :
+- **api** : API REST catalogue (Express, Node 22, image durcie multi-étapes).
+- **notifier** : Microservice de notification (Express, Node 22, image durcie, écoute sur le réseau `back` uniquement).
+- **db** : Base de données PostgreSQL 16 (persistance via volume nommé, secrets Docker).
+- **adminer** : Interface web d'administration de la base.
 
 ## Prérequis
 - Docker et Docker Compose installés.
@@ -20,17 +27,21 @@ Le fil rouge des quêtes Docker.
    docker compose up -d --build
    ```
 
-## URLs
+## URLs & Ports
 - API : http://localhost:8080
 - Adminer : http://localhost:8081
+- Notifier : joignable uniquement en interne par l'API sur `http://notifier:4000/notify`
 
 ## Vérification de l'état
 ```bash
 $ docker compose ps
-NAME                 IMAGE               COMMAND                  SERVICE   STATUS                    PORTS
-demo-api-adminer-1   adminer:4           "entrypoint.sh doc..."   adminer   Up                        0.0.0.0:8081->8080/tcp
-demo-api-api-1       demo-api-api        "docker-entrypoint..."   api       Up                        0.0.0.0:8080->3000/tcp
-demo-api-db-1        postgres:16-alpine  "docker-entrypoint..."   db        Up (healthy)              5432/tcp
+```
+
+## Tester le microservice notifier
+Ajouter un produit déclenche automatiquement une notification asynchrone (best-effort) vers le microservice `notifier` :
+```bash
+curl -s -X POST localhost:8080/products -H "Content-Type: application/json" -d '{"name":"Clavier meca","price_cents":5900}'
+docker compose logs notifier | tail -5
 ```
 
 ## Comment repartir de zéro
